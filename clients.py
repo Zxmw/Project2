@@ -21,7 +21,7 @@ class client(object):
     def localUpdate(self, localEpoch, localBatchSize, Net, lossFun, opti, global_parameters):
         Net.load_state_dict(global_parameters, strict=True)
         self.train_dl = DataLoader(
-            self.train_ds, batch_size=localBatchSize, shuffle=True)
+            self.train_ds, batch_size=localBatchSize, shuffle=True, num_workers=4)
         for epoch in range(localEpoch):
             for data, label in self.train_dl:
                 data, label = data.to(self.dev), label.to(self.dev)
@@ -62,7 +62,7 @@ class ClientsGroup(object):
         test_set = AllDataSet.test_set
         pin_memory_flag = True if torch.cuda.is_available() else False
         self.test_data_loader = DataLoader(
-            test_set, shuffle=False, batch_size=self.batch_size, pin_memory=pin_memory_flag)
+            test_set, shuffle=False, batch_size=self.batch_size, pin_memory=pin_memory_flag, num_workers=4)
 
         train_set = AllDataSet.train_set
 

@@ -18,23 +18,23 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-g', '--gpu', type=str, default='0',
                     help='gpu id to use(e.g. 0,1,2,3)')
 parser.add_argument('-nc', '--num_of_clients', type=int,
-                    default=10, help='numer of the clients')
+                    default=1, help='numer of the clients')
 parser.add_argument('-cf', '--cfraction', type=float, default=1,
                     help='C fraction, 0 means 1 client, 1 means total clients')
 parser.add_argument('-E', '--epoch', type=int,
-                    default=5, help='local train epoch')
+                    default=1, help='local train epoch')
 parser.add_argument('-B', '--batchsize', type=int,
-                    default=1, help='local train batch size')
+                    default=16, help='local train batch size')
 parser.add_argument('-mn', '--model_name', type=str,
                     default='UNet', help='the model to train')
-parser.add_argument('-lr', "--learning_rate", type=float, default=0.01, help="learning rate, \
+parser.add_argument('-lr', "--learning_rate", type=float, default=0.001, help="learning rate, \
                     use value from origin paper as default")
 parser.add_argument('-vf', "--val_freq", type=int, default=5,
                     help="model validation frequency(of communications)")
 parser.add_argument('-sf', '--save_freq', type=int, default=20,
                     help='global model save frequency(of communication)')
 parser.add_argument('-ncomm', '--num_comm', type=int,
-                    default=100, help='number of communications')
+                    default=20, help='number of communications')
 parser.add_argument('-sp', '--save_path', type=str,
                     default='./checkpoints', help='the saving path of checkpoints')
 parser.add_argument('-iid', '--IID', type=int, default=1,
@@ -87,6 +87,7 @@ if __name__ == "__main__":
     for key, var in net.state_dict().items():
         global_parameters[key] = var.clone()
 
+    test_loss_list = []
     for i in range(args['num_comm']):
         print("communicate round {}".format(i+1))
 
@@ -114,34 +115,39 @@ if __name__ == "__main__":
             global_parameters[var] = (sum_parameters[var] / num_in_comm)
 
         with torch.no_grad():
-            if (i + 1) % args['val_freq'] == 0:
-                net.load_state_dict(global_parameters, strict=True)
-                # set the model in evaluation mode
-                net.eval()
-                # loop over the validation set
-                for (x, y) in testDataLoader:
-                    # send the input to the device
-                    (x, y) = (x.to(dev), y.to(dev))
-                    # make the predictions and calculate the validation loss
-                    pred = net(x)
-                    # plot the prediction and ground truth mask
-                    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                    ax[0].imshow(x[0].cpu().permute(1, 2, 0))
-                    ax[0].set_title("Input Image")
-                    #ax[1].imshow(pred[0].cpu().squeeze(), cmap="gray")
-                    ax[1].imshow(torch.sigmoid(pred[0]).cpu(
-                    ).squeeze(), cmap="gray", vmin=0, vmax=1)
-                    ax[1].set_title("Predicted Mask")
-                    plt.show()
-                    totalTestLoss += loss_func(pred, y)
-                    # evalution metric
-                    metric.addBatch(pred, y)
-
+            # if (i + 1) % args['val_freq'] == 0:
+            net.load_state_dict(global_parameters, strict=True)
+            # set the model in evaluation mode
+            net.eval()
+            iter_num = 0
+            # loop over the validation set
+            for (x, y) in testDataLoader:
+                iter_num += 1
+                # send the input to the device
+                (x, y) = (x.to(dev), y.to(dev))
+                # make the predictions and calculate the validation loss
+                pred = net(x)
+                # plot the prediction and ground truth mask
+                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+                ax[0].imshow(x[0].cpu().permute(1, 2, 0))
+                ax[0].set_title("Input Image")
+                #ax[1].imshow(pred[0].cpu().squeeze(), cmap="gray")
+                ax[1].imshow(torch.sigmoid(pred[0]).cpu(
+                ).squeeze(), cmap="gray", vmin=0, vmax=1)
+                ax[1].set_title("Predicted Mask")
+                plt.show()
+                totalTestLoss += loss_func(pred, y)
+                # evalution metric
+                metric.addBatch(pred, y)
+        print(metric.confusionMatrix)
         avgmIOU = metric.meanIntersectionOverUnion()
+        avgTestLoss = totalTestLoss / iter_num
         precison = metric.precision()[1]
         recall = metric.recall()[1]
         F1score = metric.F1score()[1]
-
+        test_loss_list.append(avgTestLoss.cpu().detach().numpy())
+        print("Test loss: {:.4f},mIOU:{:.2f},precision:{:.2f},recall:{:.2f},F1score:{:.2f}".format(
+		        avgTestLoss,avgmIOU,precison,recall,F1score))
         if (i + 1) % args['save_freq'] == 0:
             torch.save(net, os.path.join(args['save_path'],
                                          '{}_num_comm{}_E{}_B{}_lr{}_num_clients{}_cf{}'.format(args['model_name'],
