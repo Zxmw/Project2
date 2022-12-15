@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
 from getData import GetDataSet
-from PIL import Image
+import matplotlib.pyplot as plt
 from torchvision import transforms
 import copy
 import os.path
@@ -23,13 +23,23 @@ class client(object):
         self.train_dl = DataLoader(
             self.train_ds, batch_size=localBatchSize, shuffle=True, num_workers=4)
         for epoch in range(localEpoch):
+            flag = True
             for data, label in self.train_dl:
+                if(flag):
+                    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+                    ax[0].imshow(data[0].cpu().permute(1, 2, 0))
+                    ax[0].set_title("Input Image")
+                    ax[1].imshow(label[0].cpu().squeeze(), cmap="gray")
+                    ax[1].set_title("Ground Truth Mask")
+                    plt.savefig("test.png")
+                    flag = False
                 data, label = data.to(self.dev), label.to(self.dev)
                 preds = Net(data)
                 loss = lossFun(preds, label)
+                opti.zero_grad()
                 loss.backward()
                 opti.step()
-                opti.zero_grad()
+
 
         return Net.state_dict()
 
@@ -52,10 +62,7 @@ class ClientsGroup(object):
             input_image_height, input_image_width, test_frac)
 
     def dataSetBalanceAllocation(self, input_image_height, input_image_width, test_frac):
-        self.transform = transforms.Compose([transforms.ToPILImage(),
-                                             transforms.Resize((input_image_height,
-                                                                input_image_width), interpolation=Image.NEAREST),
-                                             transforms.ToTensor()])
+        self.transform = transforms.Compose([transforms.ToTensor()])
         AllDataSet = GetDataSet(dataSetName=self.data_set_name, transform=self.transform,
                                 dataset_path=self.data_set_path, batch_size=self.batch_size, isIID=self.is_iid,)
 

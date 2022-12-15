@@ -156,6 +156,7 @@ class GetDataSet(object):
             order = np.arange(len(trainImages))
             np.random.shuffle(order)
             trainImages = np.array(trainImages)[order]
+            trainMasks = np.array(trainMasks)[order]
         else:
             raise NotImplementedError
             '''labels = np.argmax(train_labels, axis=1)

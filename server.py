@@ -135,7 +135,8 @@ if __name__ == "__main__":
                 ax[1].imshow(torch.sigmoid(pred[0]).cpu(
                 ).squeeze(), cmap="gray", vmin=0, vmax=1)
                 ax[1].set_title("Predicted Mask")
-                plt.show()
+                plt.savefig(os.path.join(
+                    './plots', "pred_{}.png".format(iter_num)))
                 totalTestLoss += loss_func(pred, y)
                 # evalution metric
                 metric.addBatch(pred, y)
