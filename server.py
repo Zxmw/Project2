@@ -29,7 +29,8 @@ parser.add_argument(
     default=1,
     help="C fraction, 0 means 1 client, 1 means total clients",
 )
-parser.add_argument("-E", "--epoch", type=int, default=1, help="local train epoch")
+parser.add_argument("-E", "--epoch", type=int,
+                    default=5, help="local train epoch")
 parser.add_argument(
     "-B", "--batchsize", type=int, default=16, help="local train batch size"
 )
@@ -40,7 +41,7 @@ parser.add_argument(
     "-lr",
     "--learning_rate",
     type=float,
-    default=0.001,
+    default=0.0001,
     help="learning rate, \
                     use value from origin paper as default",
 )
@@ -77,8 +78,15 @@ parser.add_argument(
     "-dpath",
     "--dataset_path",
     type=str,
-    default="./concreteCrackSegmentationDataset",
+    default="./SematicSeg_Dataset",
     help="where the data is located",
+)
+parser.add_argument(
+    "-dname",
+    "--dataset_name",
+    type=str,
+    default="AsphaltCrack",
+    help="the name of the dataset",
 )
 parser.add_argument(
     "-tf", "--test_frac", type=float, default=0.15, help="the fraction of the test data"
@@ -114,6 +122,11 @@ if __name__ == "__main__":
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
     net = None
+    seed = 1  # seed必须是int，可以自行设置
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)  # 让显卡产生的随机数一致
+    torch.cuda.manual_seed_all(seed)  # 多卡模式下，让所有显卡生成的随机数一致？这个待验证
+    np.random.seed(seed)  # numpy产生的随机数一致
     if args["model_name"] == "UNet":
         net = UNet()
 
@@ -126,7 +139,7 @@ if __name__ == "__main__":
     opti = optim.Adam(net.parameters(), lr=args["learning_rate"])
 
     myClients = ClientsGroup(
-        dataSetName="ConcreteCrack",
+        dataSetName=args["dataset_name"],
         data_set_path=args["dataset_path"],
         input_image_height=args["image_height"],
         input_image_width=args["image_width"],
@@ -171,7 +184,8 @@ if __name__ == "__main__":
                     sum_parameters[key] = var.clone()
             else:
                 for var in sum_parameters:
-                    sum_parameters[var] = sum_parameters[var] + local_parameters[var]
+                    sum_parameters[var] = sum_parameters[var] + \
+                        local_parameters[var]
 
         for var in global_parameters:
             global_parameters[var] = sum_parameters[var] / num_in_comm
@@ -198,7 +212,8 @@ if __name__ == "__main__":
                     torch.sigmoid(pred[0]).cpu().squeeze(), cmap="gray", vmin=0, vmax=1
                 )
                 ax[1].set_title("Predicted Mask")
-                plt.savefig(os.path.join("./plots", "pred_{}.png".format(iter_num)))
+                plt.savefig(os.path.join(
+                    "./plots", "pred_{}.png".format(iter_num)))
                 totalTestLoss += loss_func(pred, y)
                 # evalution metric
                 metric.addBatch(pred, y)
