@@ -3,7 +3,8 @@ import gzip
 import os
 import platform
 import pickle
-from PIL import Image
+from torchvision import transforms
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -138,19 +139,6 @@ class GetDataSet(object):
         f.write("\n".join(testMasks))
         f.close()
 
-        # create the train and test datasets
-        if isIID:
-            order = np.arange(len(trainImages))
-            np.random.shuffle(order)
-            trainImages = np.array(trainImages)[order]
-            trainMasks = np.array(trainMasks)[order]
-        else:
-            raise NotImplementedError
-            """labels = np.argmax(train_labels, axis=1)
-            order = np.argsort(labels)
-            self.train_data = train_images[order]
-            self.train_label = train_labels[order]"""
-
         trainDS = SegmentationDataSet(
             image_dataset_path,
             mask_dataset_path,
@@ -165,6 +153,28 @@ class GetDataSet(object):
             testMasks,
             transform=self.transform,
         )
+
+        # create the train and test datasets
+        if isIID:
+            order = np.arange(len(trainImages))
+            np.random.shuffle(order)
+            trainImages = np.array(trainImages)[order]
+            trainMasks = np.array(trainMasks)[order]
+        else:
+            num_white = []
+            for i in range(trainDS.data_len):
+                mask = trainDS[i][1]
+                mask = mask.numpy()
+                total_white = np.sum(mask)
+                print(total_white)
+                num_white.append(total_white)
+
+            sorted_id = sorted(range(trainDS.data_len),
+                               key=lambda k: num_white[k])
+            trainImages = np.array(trainImages)[sorted_id]
+            trainMasks = np.array(trainMasks)[sorted_id]
+
+        trainDS.set_img_name_ls(trainImages, trainMasks)
         print(f"[INFO] found {len(trainDS)} examples in the training set...")
         print(f"[INFO] found {len(testDS)} examples in the test set...")
         # create the training and test data loaders
@@ -179,19 +189,15 @@ class GetDataSet(object):
 
 if __name__ == "__main__":
     "test data set"
-    mnistDataSet = GetDataSet("mnist", True)  # test NON-IID
-    if (
-        type(mnistDataSet.train_data) is np.ndarray
-        and type(mnistDataSet.test_data) is np.ndarray
-        and type(mnistDataSet.train_label) is np.ndarray
-        and type(mnistDataSet.test_label) is np.ndarray
-    ):
-        print("the type of data is numpy ndarray")
-    else:
-        print("the type of data is not numpy ndarray")
-    print("the shape of the train data set is {}".format(
-        mnistDataSet.train_data.shape))
-    print("the shape of the test data set is {}".format(
-        mnistDataSet.test_data.shape))
-    print(mnistDataSet.train_label[0:100],
-          mnistDataSet.train_label[11000:11100])
+    transform = transforms.Compose([transforms.ToTensor()])
+    ConcreteCrackDataSet = GetDataSet(
+        "ConcreteCrack", dataset_path='./concreteCrackSegmentationDataset', transform=transform, isIID=False)  # test NON-IID
+
+    trainDS = ConcreteCrackDataSet.train_set
+    for i in range(len(trainDS)):
+        img, label = trainDS[i]
+        if i % 10 == 0:
+            fix, ax = plt.subplots(1, 2)
+            ax[0].imshow(img.permute(1, 2, 0))
+            ax[1].imshow(label.squeeze(), cmap='gray')
+            plt.savefig(f'./plottest/{i}.png')
