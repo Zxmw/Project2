@@ -1,15 +1,13 @@
 import os
-import argparse
-from tqdm import tqdm
-import numpy as np
 import torch
-import torch.nn.functional as F
-import cv2
-import matplotlib.pyplot as plt
+import logging
+import argparse
+import numpy as np
+
+from tqdm import tqdm
+from Models import UNet
 from torch import optim
 from clients import ClientsGroup, client
-from Models import UNet
-from torch.nn import BCEWithLogitsLoss
 from utils import DiceLoss, SegmentationMetric
 
 
@@ -30,9 +28,9 @@ parser.add_argument(
     help="C fraction, 0 means 1 client, 1 means total clients",
 )
 parser.add_argument("-E", "--epoch", type=int,
-                    default=5, help="local train epoch")
+                    default=1, help="local train epoch")
 parser.add_argument(
-    "-B", "--batchsize", type=int, default=16, help="local train batch size"
+    "-B", "--batchsize", type=int, default=1, help="local train batch size"
 )
 parser.add_argument(
     "-mn", "--model_name", type=str, default="UNet", help="the model to train"
@@ -70,17 +68,16 @@ parser.add_argument(
     help="the saving path of checkpoints",
 )
 parser.add_argument(
+    "-lp",
+    "--log_path",
+    type=str,
+    default="./logs",
+    help="the saving path of logs",
+)
+parser.add_argument(
     "-iid", "--IID", type=int, default=1, help="the way to allocate data to clients"
 )
 
-"""hyperparameters for this task"""
-parser.add_argument(
-    "-dpath",
-    "--dataset_path",
-    type=str,
-    default="./SematicSeg_Dataset",
-    help="where the data is located",
-)
 parser.add_argument(
     "-dname",
     "--dataset_name",
@@ -127,6 +124,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(seed)  # 让显卡产生的随机数一致
     torch.cuda.manual_seed_all(seed)  # 多卡模式下，让所有显卡生成的随机数一致？这个待验证
     np.random.seed(seed)  # numpy产生的随机数一致
+
     if args["model_name"] == "UNet":
         net = UNet()
 
@@ -137,10 +135,14 @@ if __name__ == "__main__":
 
     loss_func = DiceLoss()
     opti = optim.Adam(net.parameters(), lr=args["learning_rate"])
-
+    dataset_path = None
+    if args["dataset_name"] == "AsphaltCrack":
+        dataset_path = "./SematicSeg_Dataset"
+    elif args["dataset_name"] == "ConcreteCrack":
+        dataset_path = "./concreteCrackSegmentationDataset"
     myClients = ClientsGroup(
         dataSetName=args["dataset_name"],
-        data_set_path=args["dataset_path"],
+        data_set_path=dataset_path,
         input_image_height=args["image_height"],
         input_image_width=args["image_width"],
         isIID=args["IID"],
@@ -152,7 +154,24 @@ if __name__ == "__main__":
     testDataLoader = myClients.test_data_loader
 
     num_in_comm = int(max(args["num_of_clients"] * args["cfraction"], 1))
-
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler(
+                os.path.join(
+                    args["log_path"],
+                    args["dataset_name"]
+                    + "-"
+                    + str(args["num_of_clients"])
+                    + "-"
+                    + str(args["cfraction"])
+                    + ".log",
+                )
+            ),
+            logging.StreamHandler(),
+        ],
+    )
     global_parameters = {}
     for key, var in net.state_dict().items():
         global_parameters[key] = var.clone()
@@ -203,28 +222,35 @@ if __name__ == "__main__":
                 (x, y) = (x.to(dev), y.to(dev))
                 # make the predictions and calculate the validation loss
                 pred = net(x)
-                # plot the prediction and ground truth mask
-                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                ax[0].imshow(x[0].cpu().permute(1, 2, 0))
-                ax[0].set_title("Input Image")
-                # ax[1].imshow(pred[0].cpu().squeeze(), cmap="gray")
-                ax[1].imshow(
-                    torch.sigmoid(pred[0]).cpu().squeeze(), cmap="gray", vmin=0, vmax=1
-                )
-                ax[1].set_title("Predicted Mask")
-                plt.savefig(os.path.join(
-                    "./plots", "pred_{}.png".format(iter_num)))
+                # # plot the prediction and ground truth mask
+                # fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+                # ax[0].imshow(x[0].cpu().permute(1, 2, 0))
+                # ax[0].set_title("Input Image")
+                # # ax[1].imshow(pred[0].cpu().squeeze(), cmap="gray")
+                # ax[1].imshow(
+                #     torch.sigmoid(pred[0]).cpu().squeeze(), cmap="gray", vmin=0, vmax=1
+                # )
+                # ax[1].set_title("Predicted Mask")
+                # plt.savefig(os.path.join(
+                #     "./plots", "pred_{}.png".format(iter_num)))
                 totalTestLoss += loss_func(pred, y)
                 # evalution metric
                 metric.addBatch(pred, y)
-        print(metric.confusionMatrix)
+        # print(metric.confusionMatrix)
+        # output metric.confusionMatrix to log file
+        logging.info("confusionMatrix:{}".format(metric.confusionMatrix))
         avgmIOU = metric.meanIntersectionOverUnion()
         avgTestLoss = totalTestLoss / iter_num
         precison = metric.precision()[1]
         recall = metric.recall()[1]
         F1score = metric.F1score()[1]
         test_loss_list.append(avgTestLoss.cpu().detach().numpy())
-        print(
+        # print(
+        #     "Test loss: {:.4f},mIOU:{:.2f},precision:{:.2f},recall:{:.2f},F1score:{:.2f}".format(
+        #         avgTestLoss, avgmIOU, precison, recall, F1score
+        #     )
+        # )
+        logging.info(
             "Test loss: {:.4f},mIOU:{:.2f},precision:{:.2f},recall:{:.2f},F1score:{:.2f}".format(
                 avgTestLoss, avgmIOU, precison, recall, F1score
             )

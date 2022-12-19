@@ -1,36 +1,19 @@
-import random
-from functools import partial
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import BCEWithLogitsLoss
-from torchvision.transforms import CenterCrop
-import os
-from torch.utils.data import Dataset, DataLoader
-from torch.optim import Adam
-from sklearn.model_selection import train_test_split
-from torchvision import transforms
-import torchvision
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-import time
+
 
 # U-Net model
-#convolutiuon class
+# convolutiuon class
 class Conv(nn.Module):
     def __init__(self, C_in, C_out):
         super(Conv, self).__init__()
         self.layer = nn.Sequential(
-
             nn.Conv2d(C_in, C_out, 3, 1, 1),
             nn.BatchNorm2d(C_out),
             # 防止过拟合
             nn.Dropout(0.3),
             nn.LeakyReLU(),
-
             nn.Conv2d(C_out, C_out, 3, 1, 1),
             nn.BatchNorm2d(C_out),
             # 防止过拟合
@@ -49,7 +32,7 @@ class DownSampling(nn.Module):
         self.Down = nn.Sequential(
             # 使用卷积进行2倍的下采样，通道数不变
             nn.Conv2d(C, C, 3, 2, 1),
-            nn.LeakyReLU()
+            nn.LeakyReLU(),
         )
 
     def forward(self, x):
@@ -58,7 +41,6 @@ class DownSampling(nn.Module):
 
 # 上采样模块
 class UpSampling(nn.Module):
-
     def __init__(self, C):
         super(UpSampling, self).__init__()
         # 特征图大小扩大2倍，通道数减半
@@ -74,7 +56,6 @@ class UpSampling(nn.Module):
 
 # 主干网络
 class UNet(nn.Module):
-
     def __init__(self):
         super(UNet, self).__init__()
 
@@ -99,7 +80,7 @@ class UNet(nn.Module):
         self.U4 = UpSampling(128)
         self.C9 = Conv(128, 64)
 
-        #self.Th = torch.nn.Sigmoid()
+        # self.Th = torch.nn.Sigmoid()
         self.pred = torch.nn.Conv2d(64, 1, 3, 1, 1)
 
     def forward(self, x):
@@ -119,4 +100,4 @@ class UNet(nn.Module):
 
         # 输出预测，这里大小跟输入是一致的
         # 可以把下采样时的中间抠出来再进行拼接，这样修改后输出就会更小
-        return self.pred(O4)#self.Th(self.pred(O4))
+        return self.pred(O4)  # self.Th(self.pred(O4))

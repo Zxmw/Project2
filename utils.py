@@ -23,17 +23,17 @@ import cv2
 class WeightedFocalLoss(nn.Module):
     "Non weighted version of Focal Loss"
 
-    def __init__(self, alpha=.25, gamma=2):
+    def __init__(self, alpha=0.25, gamma=2):
         super(WeightedFocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        BCE_loss = F.binary_cross_entropy_with_logits(
-            inputs, targets, reduction='none')
+        BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
         pt = torch.exp(-BCE_loss)  # prevents nans when probability 0
-        F_loss = self.alpha * (1-pt)**self.gamma * BCE_loss
+        F_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
         return F_loss.mean()
+
 
 # dice loss
 
@@ -46,9 +46,11 @@ class DiceLoss(nn.Module):
     def forward(self, y_pred, y_true):
         y_pred = torch.sigmoid(y_pred)
         intersection = (y_pred * y_true).sum()
-        dice = (2. * intersection + self.smooth) / \
-            (y_pred.sum() + y_true.sum() + self.smooth)
+        dice = (2.0 * intersection + self.smooth) / (
+            y_pred.sum() + y_true.sum() + self.smooth
+        )
         return 1 - dice
+
 
 # evalution metri
 
@@ -56,15 +58,17 @@ class DiceLoss(nn.Module):
 class SegmentationMetric(object):
     def __init__(self, numClass):
         self.numClass = numClass
-        self.confusionMatrix = np.zeros((self.numClass,)*2)
+        self.confusionMatrix = np.zeros((self.numClass,) * 2)
 
     def meanIntersectionOverUnion(self):
         # Intersection = TP Union = TP + FP + FN
         # IoU = TP / (TP + FP + FN)
         intersection = np.diag(self.confusionMatrix)
-        union = np.sum(self.confusionMatrix, axis=1) + \
-            np.sum(self.confusionMatrix, axis=0) - \
-            np.diag(self.confusionMatrix)
+        union = (
+            np.sum(self.confusionMatrix, axis=1)
+            + np.sum(self.confusionMatrix, axis=0)
+            - np.diag(self.confusionMatrix)
+        )
         IoU = intersection / union
         mIoU = np.nanmean(IoU)
         return mIoU
@@ -82,20 +86,19 @@ class SegmentationMetric(object):
     def addBatch(self, imgPredict, imgLabel):
         assert imgPredict.shape == imgLabel.shape
         self.confusionMatrix += self.genConfusionMatrix(
-            imgPredict.cpu(), imgLabel.cpu())
+            imgPredict.cpu(), imgLabel.cpu()
+        )
 
     def recall(self):
         # return all class recall
         # recall = TP / (TP + FN)
-        recall = np.diag(self.confusionMatrix) / \
-            np.sum(self.confusionMatrix, axis=1)
+        recall = np.diag(self.confusionMatrix) / np.sum(self.confusionMatrix, axis=1)
         return recall
 
     def precision(self):
         # return all class precision
         # precision = TP / (TP + FP)
-        precision = np.diag(self.confusionMatrix) / \
-            np.sum(self.confusionMatrix, axis=0)
+        precision = np.diag(self.confusionMatrix) / np.sum(self.confusionMatrix, axis=0)
         return precision
 
     def F1score(self):

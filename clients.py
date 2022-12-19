@@ -1,13 +1,10 @@
-import numpy as np
-import torch
-from torch.utils.data import TensorDataset
-from torch.utils.data import DataLoader
-from getData import GetDataSet
-import matplotlib.pyplot as plt
-from torchvision import transforms
 import copy
-import os.path
-import cv2
+import torch
+
+from getData import GetDataSet
+from torchvision import transforms
+from torch.utils.data import DataLoader
+
 
 
 class client(object):
@@ -26,16 +23,7 @@ class client(object):
             self.train_ds, batch_size=localBatchSize, shuffle=True, num_workers=4
         )
         for epoch in range(localEpoch):
-            flag = True
             for data, label in self.train_dl:
-                if flag:
-                    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                    ax[0].imshow(data[0].cpu().permute(1, 2, 0))
-                    ax[0].set_title("Input Image")
-                    ax[1].imshow(label[0].cpu().squeeze(), cmap="gray")
-                    ax[1].set_title("Ground Truth Mask")
-                    plt.savefig("test.png")
-                    flag = False
                 data, label = data.to(self.dev), label.to(self.dev)
                 preds = Net(data)
                 loss = lossFun(preds, label)
