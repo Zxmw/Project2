@@ -9,7 +9,6 @@ from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
 
 
-
 class SegmentationDataSet(Dataset):
     def __init__(
         self,
@@ -35,6 +34,7 @@ class SegmentationDataSet(Dataset):
         return self.data_len
 
     def __getitem__(self, index):
+        # get the image and mask
         img_name = self.img_name_ls[index]
         label_name = self.label_name_ls[index]
         img_path = os.path.join(self.data_dir, img_name)
@@ -42,8 +42,10 @@ class SegmentationDataSet(Dataset):
         img = cv2.imread(img_path)
         label = cv2.imread(label_path)
         # resize the image and mask
-        img = cv2.resize(img, (self.input_image_width, self.input_image_height))
-        label = cv2.resize(label, (self.input_image_width, self.input_image_height))
+        img = cv2.resize(
+            img, (self.input_image_width, self.input_image_height))
+        label = cv2.resize(
+            label, (self.input_image_width, self.input_image_height))
         # convert mask to 0 and 1
         label = cv2.cvtColor(label, cv2.COLOR_BGR2GRAY)
         label[label > 0] = 1
@@ -70,6 +72,8 @@ class GetDataSet(object):
         batch_size=64,
         isIID=True,
         test_frac=0.15,
+        input_image_height=320,
+        input_image_width=480,
     ):
         self.name = dataSetName
         self.train_set = None
@@ -95,12 +99,15 @@ class GetDataSet(object):
         image_document_name,
         label_document_name,
         test_split=0.15,
+        input_image_height=320,
+        input_image_width=480,
     ):
-        image_dataset_path = os.path.join(self.dataset_path, image_document_name)
-        mask_dataset_path = os.path.join(self.dataset_path, label_document_name)
+        image_dataset_path = os.path.join(
+            self.dataset_path, image_document_name)
+        mask_dataset_path = os.path.join(
+            self.dataset_path, label_document_name)
         imagePaths = sorted(list(os.listdir(image_dataset_path)))
         maskPaths = sorted(list(os.listdir(mask_dataset_path)))
-
         # get first 10 images and masks
         imagePaths = imagePaths[:10]
         maskPaths = maskPaths[:10]
@@ -122,7 +129,8 @@ class GetDataSet(object):
 
         # define the path to the output serialized model, model training
         # plot, and testing image paths
-        test_image_path = os.path.sep.join([base_output, "test_image_paths.txt"])
+        test_image_path = os.path.sep.join(
+            [base_output, "test_image_paths.txt"])
         test_mask_path = os.path.sep.join([base_output, "test_mask_paths.txt"])
 
         print("[INFO] saving testing image paths...")
@@ -140,6 +148,8 @@ class GetDataSet(object):
             trainImages,
             trainMasks,
             transform=self.transform,
+            input_image_height=input_image_height,
+            input_image_width=input_image_width,
         )
         testDS = SegmentationDataSet(
             image_dataset_path,
@@ -147,6 +157,8 @@ class GetDataSet(object):
             testImages,
             testMasks,
             transform=self.transform,
+            input_image_height=input_image_height,
+            input_image_width=input_image_width,
         )
 
         # create the train and test datasets
@@ -156,6 +168,7 @@ class GetDataSet(object):
             trainImages = np.array(trainImages)[order]
             trainMasks = np.array(trainMasks)[order]
         else:
+            # when non-IID, sort the data by the number of white pixels
             num_white = []
             for i in range(trainDS.data_len):
                 mask = trainDS[i][1]
@@ -164,7 +177,8 @@ class GetDataSet(object):
                 print(total_white)
                 num_white.append(total_white)
 
-            sorted_id = sorted(range(trainDS.data_len), key=lambda k: num_white[k])
+            sorted_id = sorted(range(trainDS.data_len),
+                               key=lambda k: num_white[k])
             trainImages = np.array(trainImages)[sorted_id]
             trainMasks = np.array(trainMasks)[sorted_id]
 

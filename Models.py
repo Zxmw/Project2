@@ -11,12 +11,12 @@ class Conv(nn.Module):
         self.layer = nn.Sequential(
             nn.Conv2d(C_in, C_out, 3, 1, 1),
             nn.BatchNorm2d(C_out),
-            # 防止过拟合
+            # prevent overfitting
             nn.Dropout(0.3),
             nn.LeakyReLU(),
             nn.Conv2d(C_out, C_out, 3, 1, 1),
             nn.BatchNorm2d(C_out),
-            # 防止过拟合
+            # prevent overfitting
             nn.Dropout(0.4),
             nn.LeakyReLU(),
         )
@@ -25,12 +25,12 @@ class Conv(nn.Module):
         return self.layer(x)
 
 
-# 下采样模块
+# down sampling module
 class DownSampling(nn.Module):
     def __init__(self, C):
         super(DownSampling, self).__init__()
         self.Down = nn.Sequential(
-            # 使用卷积进行2倍的下采样，通道数不变
+            # 2X downsampling using convolution with the same number of channels
             nn.Conv2d(C, C, 3, 2, 1),
             nn.LeakyReLU(),
         )
@@ -39,27 +39,27 @@ class DownSampling(nn.Module):
         return self.Down(x)
 
 
-# 上采样模块
+# up sampling module
 class UpSampling(nn.Module):
     def __init__(self, C):
         super(UpSampling, self).__init__()
-        # 特征图大小扩大2倍，通道数减半
+        # Feature map size is expanded by 2 times and the number of channels is halved
         self.Up = nn.Conv2d(C, C // 2, 1, 1)
 
     def forward(self, x, r):
-        # 使用邻近插值进行下采样
+        # Downsampling using neighborhood interpolation
         up = F.interpolate(x, scale_factor=2, mode="nearest")
         x = self.Up(up)
-        # 拼接，当前上采样的，和之前下采样过程中的
+        # concat, the current upsampling, and the previous downsampling process
         return torch.cat((x, r), 1)
 
 
-# 主干网络
+# U-Net model
 class UNet(nn.Module):
     def __init__(self):
         super(UNet, self).__init__()
 
-        # 4次下采样
+        # 4 times down sampling
         self.C1 = Conv(3, 64)
         self.D1 = DownSampling(64)
         self.C2 = Conv(64, 128)
@@ -70,7 +70,7 @@ class UNet(nn.Module):
         self.D4 = DownSampling(512)
         self.C5 = Conv(512, 1024)
 
-        # 4次上采样
+        # 4 times up sampling
         self.U1 = UpSampling(1024)
         self.C6 = Conv(1024, 512)
         self.U2 = UpSampling(512)
@@ -84,20 +84,18 @@ class UNet(nn.Module):
         self.pred = torch.nn.Conv2d(64, 1, 3, 1, 1)
 
     def forward(self, x):
-        # 下采样部分
+        # down sampling
         R1 = self.C1(x)
         R2 = self.C2(self.D1(R1))
         R3 = self.C3(self.D2(R2))
         R4 = self.C4(self.D3(R3))
         Y1 = self.C5(self.D4(R4))
 
-        # 上采样部分
-        # 上采样的时候需要拼接起来
+        # up sampling
         O1 = self.C6(self.U1(Y1, R4))
         O2 = self.C7(self.U2(O1, R3))
         O3 = self.C8(self.U3(O2, R2))
         O4 = self.C9(self.U4(O3, R1))
 
-        # 输出预测，这里大小跟输入是一致的
-        # 可以把下采样时的中间抠出来再进行拼接，这样修改后输出就会更小
+        # output
         return self.pred(O4)  # self.Th(self.pred(O4))

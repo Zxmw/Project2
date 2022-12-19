@@ -6,7 +6,6 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 
 
-
 class client(object):
     def __init__(self, trainDataSet, dev, client_id):
         self.train_ds = trainDataSet
@@ -59,7 +58,8 @@ class ClientsGroup(object):
         self.test_data_loader = None
         self.data_set_path = data_set_path
 
-        self.dataSetBalanceAllocation(input_image_height, input_image_width, test_frac)
+        self.dataSetBalanceAllocation(
+            input_image_height, input_image_width, test_frac)
 
     def dataSetBalanceAllocation(
         self, input_image_height, input_image_width, test_frac
@@ -71,6 +71,9 @@ class ClientsGroup(object):
             dataset_path=self.data_set_path,
             batch_size=self.batch_size,
             isIID=self.is_iid,
+            test_frac=test_frac,
+            input_image_height=input_image_height,
+            input_image_width=input_image_width,
         )
 
         test_set = AllDataSet.test_set
@@ -100,15 +103,11 @@ class ClientsGroup(object):
             local_label = np.argmax(local_label, axis=1)"""
             local_data = copy.deepcopy(train_set)
             local_data.set_img_name_ls(
-                all_train_img_ls[i * local_data_size : (i + 1) * local_data_size],
-                all_train_label_ls[i * local_data_size : (i + 1) * local_data_size],
+                all_train_img_ls[i *
+                                 local_data_size: (i + 1) * local_data_size],
+                all_train_label_ls[i *
+                                   local_data_size: (i + 1) * local_data_size],
             )
 
             someone = client(local_data, self.dev, i)
             self.clients_set["client{}".format(i)] = someone
-
-
-if __name__ == "__main__":
-    MyClients = ClientsGroup("mnist", True, 100, 1)
-    print(MyClients.clients_set["client10"].train_ds[0:100])
-    print(MyClients.clients_set["client11"].train_ds[400:500])
