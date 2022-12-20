@@ -5,17 +5,15 @@
 #     cfraction: 1, 0.75, 0.5, 0.25
 #     epoch: 1, 5, 10
 #     IID: 1, 0
-
 # create logs folder and checkpoints folder
 mkdir -p logs
 mkdir -p checkpoints
-
 # Run all experiments
 for dataset_name in "ConcreteCrack" "AsphaltCrack"
 do
-    for num_of_clients in 1 5 10 20
+    for num_of_clients in 10
     do
-        for cfraction in 1 0.75 0.5 0.25
+        for cfraction in 1
         do
             for epoch in 1 5 10
             do
