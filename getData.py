@@ -1,5 +1,4 @@
 import numpy as np
-import gzip
 import os
 import cv2
 import matplotlib.pyplot as plt
@@ -86,11 +85,11 @@ class GetDataSet(object):
 
         if self.name == "ConcreteCrack":
             self.train_set, self.test_set = self.ConcreteCrackDataSetConstruct(
-                isIID, test_split=test_frac
+                isIID, test_split=test_frac, input_image_height=input_image_height, input_image_width=input_image_width
             )
         elif self.name == "AsphaltCrack":
             self.train_set, self.test_set = self.AsphaltCrackDataSetConstruct(
-                isIID, test_split=test_frac
+                isIID, test_split=test_frac, input_image_height=input_image_height, input_image_width=input_image_width
             )
 
     def DataSetConstruct(
@@ -108,9 +107,7 @@ class GetDataSet(object):
             self.dataset_path, label_document_name)
         imagePaths = sorted(list(os.listdir(image_dataset_path)))
         maskPaths = sorted(list(os.listdir(mask_dataset_path)))
-        # get first 10 images and masks
-        imagePaths = imagePaths[:10]
-        maskPaths = maskPaths[:10]
+
         # partition the data into training and testing splits using 85% of
         # the data for training and the remaining 15% for testing
         split = train_test_split(

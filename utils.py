@@ -1,23 +1,8 @@
-import random
-from functools import partial
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import BCEWithLogitsLoss
-from torchvision.transforms import CenterCrop
-import os
-from torch.utils.data import Dataset, DataLoader
-from torch.optim import Adam
-from sklearn.model_selection import train_test_split
-from torchvision import transforms
-import torchvision
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-import time
-import cv2
 
 
 class WeightedFocalLoss(nn.Module):
@@ -29,7 +14,8 @@ class WeightedFocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+        BCE_loss = F.binary_cross_entropy_with_logits(
+            inputs, targets, reduction="none")
         pt = torch.exp(-BCE_loss)  # prevents nans when probability 0
         F_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
         return F_loss.mean()
@@ -92,13 +78,15 @@ class SegmentationMetric(object):
     def recall(self):
         # return all class recall
         # recall = TP / (TP + FN)
-        recall = np.diag(self.confusionMatrix) / np.sum(self.confusionMatrix, axis=1)
+        recall = np.diag(self.confusionMatrix) / \
+            np.sum(self.confusionMatrix, axis=1)
         return recall
 
     def precision(self):
         # return all class precision
         # precision = TP / (TP + FP)
-        precision = np.diag(self.confusionMatrix) / np.sum(self.confusionMatrix, axis=0)
+        precision = np.diag(self.confusionMatrix) / \
+            np.sum(self.confusionMatrix, axis=0)
         return precision
 
     def F1score(self):
