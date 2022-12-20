@@ -174,7 +174,6 @@ class GetDataSet(object):
                 mask = trainDS[i][1]
                 mask = mask.numpy()
                 total_white = np.sum(mask)
-                print(total_white)
                 num_white.append(total_white)
 
             sorted_id = sorted(range(trainDS.data_len),
@@ -188,11 +187,11 @@ class GetDataSet(object):
         # create the training and test data loaders
         return trainDS, testDS
 
-    def ConcreteCrackDataSetConstruct(self, isIID, test_split=0.15):
-        return self.DataSetConstruct(isIID, "rgb", "BW", test_split)
+    def ConcreteCrackDataSetConstruct(self, isIID, test_split=0.15, input_image_height=320, input_image_width=480):
+        return self.DataSetConstruct(isIID, "rgb", "BW", test_split, input_image_height, input_image_width)
 
-    def AsphaltCrackDataSetConstruct(self, isIID, test_split=0.15):
-        return self.DataSetConstruct(isIID, "Original Image", "Labels", test_split)
+    def AsphaltCrackDataSetConstruct(self, isIID, test_split=0.15, input_image_height=320, input_image_width=480):
+        return self.DataSetConstruct(isIID, "Original Image", "Labels", test_split, input_image_height, input_image_width)
 
 
 if __name__ == "__main__":

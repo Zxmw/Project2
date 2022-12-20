@@ -30,7 +30,7 @@ parser.add_argument(
 parser.add_argument("-E", "--epoch", type=int,
                     default=1, help="local train epoch")
 parser.add_argument(
-    "-B", "--batchsize", type=int, default=1, help="local train batch size"
+    "-B", "--batchsize", type=int, default=16, help="local train batch size"
 )
 parser.add_argument(
     "-mn", "--model_name", type=str, default="UNet", help="the model to train"
@@ -75,7 +75,7 @@ parser.add_argument(
     help="the saving path of logs",
 )
 parser.add_argument(
-    "-iid", "--IID", type=int, default=1, help="the way to allocate data to clients"
+    "-iid", "--IID", type=int, default=1, help="the way to allocate data to clients, 1 is IID, 0 is non-IID"
 )
 
 parser.add_argument(
@@ -167,6 +167,10 @@ if __name__ == "__main__":
                     + str(args["num_of_clients"])
                     + "-"
                     + str(args["cfraction"])
+                    + "-"
+                    + str(args["epoch"])
+                    + "-"
+                    + str(args["IID"])
                     + ".log",
                 )
             ),
