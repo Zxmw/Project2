@@ -137,6 +137,10 @@ if __name__ == "__main__":
     loss_func = DiceLoss()
     opti = optim.Adam(net.parameters(), lr=args["learning_rate"])
     dataset_path = None
+    miou_ls = []
+    precison_ls=[]
+    recall_ls=[]
+    f1_ls=[]
     if args["dataset_name"] == "AsphaltCrack":
         dataset_path = "./SematicSeg_Dataset"
     elif args["dataset_name"] == "ConcreteCrack":
@@ -194,6 +198,7 @@ if __name__ == "__main__":
         sum_parameters = None
 
         for client in tqdm(clients_in_comm):
+            net.train()
             local_parameters = myClients.clients_set[client].localUpdate(
                 args["epoch"],
                 args["batchsize"],
@@ -248,11 +253,19 @@ if __name__ == "__main__":
         recall = metric.recall()[1]
         F1score = metric.F1score()[1]
         test_loss_list.append(avgTestLoss.cpu().detach().numpy())
+        miou_ls.append(round(avgmIOU,2))
+        precison_ls.append(round(precison,2))
+        recall_ls.append(round(recall,2))
+        f1_ls.append(round(F1score,2))
         logging.info(
             "Test loss: {:.4f},mIOU:{:.2f},precision:{:.2f},recall:{:.2f},F1score:{:.2f}".format(
                 avgTestLoss, avgmIOU, precison, recall, F1score
             )
         )
+        logging.info(
+            f"\nmIOU:{','.join(str(i) for i in miou_ls)}\nprecision:{','.join(str(i) for i in precison_ls)}\nrecall:{','.join(str(i) for i in recall_ls)}\nF1score:{','.join(str(i) for i in f1_ls)}"
+            )
+        
         if (i + 1) % args["save_freq"] == 0:
             torch.save(
                 net,
