@@ -141,10 +141,12 @@ if __name__ == "__main__":
     precison_ls=[]
     recall_ls=[]
     f1_ls=[]
+    
     if args["dataset_name"] == "AsphaltCrack":
         dataset_path = "./SematicSeg_Dataset"
     elif args["dataset_name"] == "ConcreteCrack":
         dataset_path = "./concreteCrackSegmentationDataset"
+        
     myClients = ClientsGroup(
         dataSetName=args["dataset_name"],
         data_set_path=dataset_path,
@@ -156,9 +158,10 @@ if __name__ == "__main__":
         batchsize=args["batchsize"],
         test_frac=args["test_frac"],
     )
+    
     testDataLoader = myClients.test_data_loader
-
     num_in_comm = int(max(args["num_of_clients"] * args["cfraction"], 1))
+    
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
@@ -231,19 +234,7 @@ if __name__ == "__main__":
                 (x, y) = (x.to(dev), y.to(dev))
                 # make the predictions and calculate the validation loss
                 pred = net(x)
-                # # plot the prediction and ground truth mask
-                # fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                # ax[0].imshow(x[0].cpu().permute(1, 2, 0))
-                # ax[0].set_title("Input Image")
-                # # ax[1].imshow(pred[0].cpu().squeeze(), cmap="gray")
-                # ax[1].imshow(
-                #     torch.sigmoid(pred[0]).cpu().squeeze(), cmap="gray", vmin=0, vmax=1
-                # )
-                # ax[1].set_title("Predicted Mask")
-                # plt.savefig(os.path.join(
-                #     "./plots", "pred_{}.png".format(iter_num)))
                 totalTestLoss += loss_func(pred, y)
-                # evalution metric
                 metric.addBatch(pred, y)
         logging.info("confusionMatrix:{}".format(metric.confusionMatrix))
         avgmIOU = metric.meanIntersectionOverUnion()

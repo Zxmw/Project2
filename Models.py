@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 # U-Net model
-# convolutiuon class
+# convolution class
 class Conv(nn.Module):
     def __init__(self, C_in, C_out):
         super(Conv, self).__init__()
@@ -58,44 +58,44 @@ class UpSampling(nn.Module):
 class UNet(nn.Module):
     def __init__(self):
         super(UNet, self).__init__()
-
+        
         # 4 times down sampling
-        self.C1 = Conv(3, 64)
-        self.D1 = DownSampling(64)
-        self.C2 = Conv(64, 128)
-        self.D2 = DownSampling(128)
-        self.C3 = Conv(128, 256)
-        self.D3 = DownSampling(256)
-        self.C4 = Conv(256, 512)
-        self.D4 = DownSampling(512)
-        self.C5 = Conv(512, 1024)
+        self.cov1 = Conv(3, 64)
+        self.encoder1 = DownSampling(64)
+        self.cov2 = Conv(64, 128)
+        self.encoder2 = DownSampling(128)
+        self.cov3 = Conv(128, 256)
+        self.encoder3 = DownSampling(256)
+        self.cov4 = Conv(256, 512)
+        self.encoder4 = DownSampling(512)
+        self.cov5 = Conv(512, 1024)
 
         # 4 times up sampling
-        self.U1 = UpSampling(1024)
-        self.C6 = Conv(1024, 512)
-        self.U2 = UpSampling(512)
-        self.C7 = Conv(512, 256)
-        self.U3 = UpSampling(256)
-        self.C8 = Conv(256, 128)
-        self.U4 = UpSampling(128)
-        self.C9 = Conv(128, 64)
+        self.decoder1 = UpSampling(1024)
+        self.cov6 = Conv(1024, 512)
+        self.decoder2 = UpSampling(512)
+        self.cov7 = Conv(512, 256)
+        self.decoder3 = UpSampling(256)
+        self.cov8 = Conv(256, 128)
+        self.decoder4 = UpSampling(128)
+        self.cov9= Conv(128, 64)
 
         # self.Th = torch.nn.Sigmoid()
         self.pred = torch.nn.Conv2d(64, 1, 3, 1, 1)
 
     def forward(self, x):
         # down sampling
-        R1 = self.C1(x)
-        R2 = self.C2(self.D1(R1))
-        R3 = self.C3(self.D2(R2))
-        R4 = self.C4(self.D3(R3))
-        Y1 = self.C5(self.D4(R4))
+        result1 = self.cov1(x)
+        result2 = self.cov2(self.encoder1(result1))
+        result3 = self.cov3(self.encoder2(result2))
+        result4 = self.cov4(self.encoder3(result3))
+        result5 = self.cov5(self.encoder4(result4))
 
         # up sampling
-        O1 = self.C6(self.U1(Y1, R4))
-        O2 = self.C7(self.U2(O1, R3))
-        O3 = self.C8(self.U3(O2, R2))
-        O4 = self.C9(self.U4(O3, R1))
+        result6 = self.cov6(self.decoder1(result5, result4))
+        result7 = self.cov7(self.decoder2(result6, result3))
+        result8 = self.cov8(self.decoder3(result7, result2))
+        result9 = self.cov9(self.decoder4(result8, result1))
 
         # output
-        return self.pred(O4)  # self.Th(self.pred(O4))
+        return self.pred(result9)  # self.Th(self.pred(O4))

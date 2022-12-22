@@ -91,16 +91,8 @@ class ClientsGroup(object):
         local_data_size = AllDataSet.train_data_size // self.num_of_clients
         all_train_img_ls = train_set.img_name_ls
         all_train_label_ls = train_set.label_name_ls
-        """shards_id = np.random.permutation(mnistDataSet.train_data_size // shard_size)"""
         for i in range(self.num_of_clients):
-            """shards_id1 = shards_id[i * 2]
-            shards_id2 = shards_id[i * 2 + 1]
-            data_shards1 = train_data[shards_id1 * shard_size: shards_id1 * shard_size + shard_size]
-            data_shards2 = train_data[shards_id2 * shard_size: shards_id2 * shard_size + shard_size]
-            label_shards1 = train_label[shards_id1 * shard_size: shards_id1 * shard_size + shard_size]
-            label_shards2 = train_label[shards_id2 * shard_size: shards_id2 * shard_size + shard_size]
-            local_data, local_label = np.vstack((data_shards1, data_shards2)), np.vstack((label_shards1, label_shards2))
-            local_label = np.argmax(local_label, axis=1)"""
+
             local_data = copy.deepcopy(train_set)
             local_data.set_img_name_ls(
                 all_train_img_ls[i *

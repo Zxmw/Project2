@@ -26,7 +26,7 @@ The project's documentation is organized as follows:
 ├── .gitignore
 ├── Models.py
 ├── README.md
-├── T1-v4.ipynb							--Pipeline for the Semantic Segmentation Part
+├── pipeline.ipynb							--Pipeline for the Semantic Segmentation Part
 ├── clients.py
 ├── getData.py
 ├── requirements.txt					--Package Required for the Project
@@ -80,10 +80,11 @@ server.py is the main file for the entire pipeline.
 - Determine all experimental parameters
 - Create all clients
 - Training is performed, and in each communication, the parameters of the server and client interact
+- Metrics are used to test the model performance
 
 #### clients.py
 
-All client matters, including the creation and training of clients
+All client matters, including the creation and local training on clients
 
 #### getData.py
 
